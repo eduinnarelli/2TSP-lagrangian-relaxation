@@ -1,7 +1,20 @@
-Relaxação Lagrangiana para o Problema dos Dois Caixeiros Viajantes (2TSP)
+Relaxação Lagrangiana para o Problema dos Dois Caixeiros Viajantes (2-TSP)
 ================================
 
 Atividade 3 de MC859 - Projeto em Teoria da Computação.
+
+**Dependências:** 
+
+Para executar, você deve estar em um ambiente de desenvolvimento com Python (nós usamos
+versões >= 3.6) e com os seguintes pacotes externos instalados:
+  - Gurobi (https://www.gurobi.com/documentation/9.0/)
+  - tqdm (https://tqdm.github.io/)
+
+**Como executar:**
+
+Na pasta raiz do repositório, rode o comando `python src/solve.py [--relaxed]`, onde a
+flag opcional `relaxed` determina se será resolvido o modelo original ou a relaxação 
+lagrangiana do 2-TSP.
 
 **Grupo:**
   - Eduardo Barros Innarelli (170161)
