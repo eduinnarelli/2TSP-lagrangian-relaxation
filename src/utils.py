@@ -82,10 +82,10 @@ def build_tours_in_sol(K, n, x_sol, all_edges):
         Lista de rotas na solução.
     '''
 
-    tours = {}
+    tours = []
     for t in range(K):
         edges_in_tour = get_edges_in_tour(t, x_sol, all_edges) 
-        tours[t] = shortest_cycle(n, edges_in_tour)
+        tours.append(shortest_cycle(n, edges_in_tour))
 
     return tours
 
