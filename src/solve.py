@@ -86,9 +86,10 @@ def k_tsp(K, n, dist, relaxed=False):
         x_sol = model.getAttr('x', xvars)
         tours = build_tours_in_sol(K, n, x_sol, xvars.keys())
 
-        # Retornar dicionário com solução ótima e tempo de execução
+        # Retornar dicionário com solução ótima (ou limitantes caso o limite
+        # de tempo seja alcançado) e tempo de execução
         return {
-            'opt': {'cost': model.objVal, 'tours': tours},
+            'opt': {'cost': model.objVal, 'lb': model.ObjBound, 'tours': tours},
             'runtime': model.Runtime,
         }
 
@@ -150,6 +151,7 @@ for instance in tqdm(instances):
     else:
         # Imprimir solução ótima
         print_solution(2, sol['opt']['tours'], sol['opt']['cost'])
+        print('Melhor limitante inferior encontrado:', sol['opt']['lb'])
 
     print(f"Tempo de execução: {sol['runtime']}s")
 
