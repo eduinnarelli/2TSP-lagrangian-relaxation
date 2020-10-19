@@ -95,9 +95,6 @@ def k_tsp(K, n, dist, relaxed=False):
     # ... e dualizadas na Relaxação Lagrangiana
     else:
 
-        # Por enquanto a relaxação só funciona para 2 caixeiros
-        assert K == 2
-
         # Criar variáveis para o subgradiente
         sgvars = model.addVars(dist.keys(), vtype=GRB.BINARY, name='sg')
         for i, j in sgvars.keys():
@@ -107,7 +104,7 @@ def k_tsp(K, n, dist, relaxed=False):
         # facilita na manipulação e extração desses valores
         model.addConstrs(
             (
-                sgvars[i,j] == 1 - xvars.sum(i, j, '*') 
+                sgvars[i,j] == - 1 + xvars.sum(i, j, '*') 
                 for i in range(n) for j in range(i)
             ),
             name='dualized'
@@ -134,7 +131,7 @@ output_name = 'rel_output.txt' if relaxed else 'opt_output.txt'
 print(f"Soluções serão salvas em '{output_name}'")
 sys.stdout = open('outputs/' + output_name, 'w')
 
-for instance in tqdm(instances[:1]):
+for instance in tqdm(instances):
     n = instance['n']
     dist = instance['dist']
 

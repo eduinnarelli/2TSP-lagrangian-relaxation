@@ -35,7 +35,7 @@ def subgradient(model, sgvars, dist):
     K = model._K
     xvars = model._xvars
   
-    # Inicializar multiplicadores com 1 (um para cada aresta)
+    # Inicializar multiplicadores com 0 (um para cada aresta)
     u = {(i,j): 0 for i in range(n) for j in range(i)}
 
     # Função objetivo original

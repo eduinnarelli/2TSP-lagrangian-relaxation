@@ -152,7 +152,6 @@ def lagrangian_heuristic(dist, tours):
     tours_best = []
     cost_best = math.inf
     for tours in permutations(tours):
-        print(tours)
         (cost_new,tours_new) = lagrangian_heuristic_assymmetric(tours)
         if cost_new < cost_best:
             tours_best = tours_new
