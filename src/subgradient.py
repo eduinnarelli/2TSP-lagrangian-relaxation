@@ -45,7 +45,11 @@ def subgradient(model, sgvars, dist):
                                  for k in range(K)
     )
 
-    for i in range(max_iterations):
+    while True:
+
+        # Tempo restante
+        model.Params.timeLimit = 1800.0 - runtime
+
         # Penalidades correspondentes às restrições dualizadas
         obj_penalty = gp.quicksum(
             u[i,j] * sgvars[i,j] for i in range(n) for j in range(i)
@@ -59,7 +63,7 @@ def subgradient(model, sgvars, dist):
         # Recuperar solução
         x_sol = model.getAttr('x', xvars)
         tours = build_tours_in_sol(K, n, x_sol, xvars.keys())
-        
+
         # Executar heurística lagrangiana para obter um limitante superior
         heuristic_sol = lagrangian_heuristic(dist, tours)
         ub = {'cost': heuristic_sol[0], 'tours': heuristic_sol[1]}
@@ -70,9 +74,9 @@ def subgradient(model, sgvars, dist):
 
         # CRITÉRIOS DE PARADA:
         # - Optimalidade
-        # - Fim das iterações
+        # - Limite de tempo
         opt_gap = (best_ub['cost'] - model.objVal) / best_ub['cost']
-        if opt_gap < 10e-6 or i == (max_iterations - 1):
+        if opt_gap < 10e-6 or runtime >= 1800.0:
             break
 
         # Recuperar subgradiente

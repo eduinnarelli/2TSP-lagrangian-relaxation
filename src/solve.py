@@ -97,7 +97,7 @@ def k_tsp(K, n, dist, relaxed=False):
     else:
 
         # Criar variáveis para o subgradiente
-        sgvars = model.addVars(dist.keys(), vtype=GRB.BINARY, name='sg')
+        sgvars = model.addVars(dist.keys(), lb= - GRB.INFINITY, vtype=GRB.INTEGER, name='sg')
         for i, j in sgvars.keys():
             sgvars[j, i] = sgvars[i, j]  # grafo não-orientado
 
