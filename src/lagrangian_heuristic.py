@@ -3,6 +3,7 @@ Nesse módulo consta a implementação da heurística lagrangiana para o K-TSP.
 '''
 
 import math
+from disjoint_set import DisjointSet
 from itertools import permutations
 
 def tours_cost(dist, tours):
@@ -25,7 +26,7 @@ def tours_cost(dist, tours):
 
     return sum
 
-def lagrangian_heuristic(dist, tours):
+def lagrangian_heuristic(dist, tours, n):
     '''
     Dados k tours com possível interseção nas arestas, remove as arestas
     repetidas e as substitui de forma gulosa por arestas de distâncias baixas.
@@ -41,12 +42,6 @@ def lagrangian_heuristic(dist, tours):
     # Arestas ordenadas pelas distâncias
     sorted_edges = [k for k, _ in sorted(dist.items(), key=lambda item: item[1])]
 
-    # Para debugar
-    def print_frangments(fragments):
-        for v, (u,o) in sorted(fragments.items()):
-            print(f"{v} -> {u} ({o}), ",end='')
-        print("\n")
-
     # Função auxiliar que corrige o segundo tour, retorna os tours corrigidos
     # e o custo total.
     def lagrangian_heuristic_assymmetric(tours):
@@ -59,86 +54,93 @@ def lagrangian_heuristic(dist, tours):
         edges_fix = set(zip(tour_fix,tour_fix[1:] + [tour_fix[0]]))
 
         # Conserta cada um dos tours restantes
-        for tour_wrong in tours[1:]:
+        pos = 1
+        sorted_edges_local = sorted_edges
+        while pos < len(tours):
+            tour_wrong = tours[pos]
 
-            # Convertendo representação do tour_wrong para um dicionário. Cada 
-            # vértice aponta para o próximo
+            # Estruturas para representar os fragmentos corretos do tour_wrong:
+            # Vizinho de cada vértice (conectados por arestas que não estejam 
+            # fixas)
+            neighbors = {}
+            # Conjunto para indicar que um vértice não tem as duas arestas
+            orphans = set()
+            # Estrutura de conjunto disjunto para representar a que fragmento 
+            # um vértice pertencem
+            ds = DisjointSet()
 
-            ######################################################################
-            # Criamos um dicionário para representar os fragmentos corretos do
-            # tour_wrong cada vértice aponta para o próximo (se a aresta já existe
-            # no tour_fix o vértice aponta para None) e para o primeiro vértice do
-            # fragmento ao qual ele pertence. Também construímos um dicionário
-            # orphans para indicar os vértices que não são mais apontados por
-            # ninguém, os valores correspondem ao último vértice dos fragmentos
-            # ao qual esses vértices pertencem.
-            fragments = {}
-            orphans = {}
+            for i in range(n):
+                ds.find(i)
+                neighbors[i] = []
+
             edges = list(zip(tour_wrong,tour_wrong[1:] + [tour_wrong[0]]))
-
-            # Encontra primeiro órfão
-            pos = 0
-            for (i, j) in edges:
+            for (i, j) in edges: # Para cada aresta do tour_wrong
+                # Se a aresta é inválida
                 if (i, j) in edges_fix or (j, i) in edges_fix:
-                    orphans[j] = j # por enquanto o fragmento termina em j
-                    first_orphan = j
-                    break
-                pos += 1
-            else:
-                # Se não achou um órfão, os ciclos já são disjuntos
-                tours_new = (tour_fix.copy(), tour_wrong.copy())
-                return [tours_cost(dist, tours_new), tours_new]
+                    # i e j são órfãos
+                    orphans.add(j)
+                    orphans.add(i)
+                else:
+                    # adiciona aresta entre i e j
+                    neighbors[i].append(j)
+                    neighbors[j].append(i)
+                    # i e j pertencem ao mesmo fragmento
+                    ds.union(i,j)
 
-            orphan = first_orphan
-            for i, j in edges[pos+1:] + edges[:pos+1]:
-                first = orphan # o fragmento começa no órfão
+            # Adiciona arestas até limpar o conjunto orphans,
+            # não permite ciclos menores que n
+            for (i, j) in sorted_edges:
 
-                if (i, j) in edges_fix or (j, i) in edges_fix: # aresta inválida
-                    next_vert = None # final do fragmento
-                    orphan = j # novo órfão
-                    # Se ainda não sabemos onde o fragmento termina
-                    if orphan != first_orphan:
-                        orphans[j] = j # por enquanto o novo fragmento termina em j
-                else: # aresta válida
-                    next_vert = j
-                    orphans[orphan] = j # por enquanto o fragmento termina em j
-
-                fragments[i] = [next_vert, first]
-            ######################################################################
-
-            # Adiciona arestas até limpar o conjunto orphans, não permite ciclos
-            # menores que n
-            for i, j in sorted_edges:
-                if len(orphans) == 1: # só existe uma possibilidade de aresta
-                    beg,end = list(orphans.items())[0]
-                    fragments[end][0] = beg
+                # Acabaram os órfãos
+                if len(orphans) == 0:
                     break
 
                 # Se (i,j) é uma candidata para adicionar
-                if not (i, j) in edges_fix and not (j, i) in edges_fix:
+                if not (i, j) in edges_fix and not (j, i) in edges_fix and\
+                   i in orphans and j in orphans:
 
-                    # Se (i,j) fecha um fragmento
-                    if fragments[i][0] == None and j in orphans:
-                        def try_add_edge(i,j):
-                            # Se não vai formar um ciclo de tamanho menor que n
-                            if fragments[i][1] != j:
-                                fragments[i][0] = j # Adiciona a aresta
-                                # Junta os fragmentos
-                                fragments[orphans[j]][1] = fragments[i][1]
-                                orphans[fragments[i][1]] = orphans[j]
-                                orphans.pop(j) # j não é mais órfão
-                        try_add_edge(i,j)
+                    # Se não vai formar um ciclo de tamanho menor que n
+                    if not ds.connected(i,j) or len(orphans) <= 2:
+                        # adiciona aresta entre i e j
+                        neighbors[i].append(j)
+                        neighbors[j].append(i)
+                        ds.union(i,j)
+                        # i e j não são mais órfãos
+                        # a menos que só tenham um vizinho
+                        if len(neighbors[i]) > 1:
+                            orphans.discard(i)
+                        if len(neighbors[j]) > 1:
+                            orphans.discard(j)
 
-                    # Grafo é não direcionado, precisamos ver (j,i) também
-                    elif fragments[j][0] == None and i in orphans:
-                        try_add_edge(j,i)
+            # Existem casos onde não podemos fechar o ciclo com o ordem 
+            # de arestas dadas, esses casos são raros com K=2, mas quanto maior
+            # o K maior a chance disso ocorrer. Nesses casos mudamos a ordem
+            # e tentamos de novo.
+            if len(orphans) > 0:
+                sorted_edges_local = sorted_edges_local[1:] + [sorted_edges_local[0]]
+
+                # Caso não seja possível formar o ciclo (K muito grande com
+                # poucos vértices).
+                if sorted_edges_local[0] ==\
+                    max(dist.items(), key=lambda item: item[1])[0]:
+                    raise Exception('Impossível formar K ciclos disjuntos')
+                continue
+            else:
+                sorted_edges_local = sorted_edges
+                pos += 1
 
             # Retorna o dicionário para uma lista
             tour_corrected = [0]
-            v = fragments[0][0]
+            u = 0
+            v = neighbors[0][0]
             while v != 0:
                 tour_corrected.append(v)
-                v = fragments[v][0]
+                if neighbors[v][0] == u:
+                    u = v
+                    v = neighbors[v][1]
+                else:
+                    u = v
+                    v = neighbors[v][0]
 
             # Fixa o novo tour
             edges_fix = edges_fix.union(set(zip(tour_corrected,tour_corrected[1:] + [tour_corrected[0]])))

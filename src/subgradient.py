@@ -65,7 +65,7 @@ def subgradient(model, sgvars, dist):
         tours = build_tours_in_sol(K, n, x_sol, xvars.keys())
 
         # Executar heurística lagrangiana para obter um limitante superior
-        heuristic_sol = lagrangian_heuristic(dist, tours)
+        heuristic_sol = lagrangian_heuristic(dist, tours, n)
         ub = {'cost': heuristic_sol[0], 'tours': heuristic_sol[1]}
 
         # Atualizar melhor limitante superior, se necessário
