@@ -26,7 +26,6 @@ def subgradient(model, sgvars, dist):
     '''
 
     pi = 2.0
-    max_iterations = 100
     runtime = 0.0
     best_ub = {'cost': float('inf')}
 
@@ -96,6 +95,10 @@ def subgradient(model, sgvars, dist):
             (i,j): max(0.0, u[i,j] + step * sg_sol[i,j]) 
             for i in range(n) for j in range(i)
         }
+
+        # Atualiza o valor de pi
+        if pi > 0.1:
+            pi = 0.99 * pi
 
     # Retornar dicionário com melhores limitantes encontrados e tempo de
     # execução total do método

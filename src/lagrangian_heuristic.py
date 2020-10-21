@@ -3,9 +3,8 @@ Nesse módulo consta a implementação da heurística lagrangiana para o K-TSP.
 '''
 
 import math
-from disjoint_set import DisjointSet
 from itertools import permutations
-from utils import next_permutation
+from heapq import *
 
 def tours_cost(dist, tours):
     '''
@@ -23,9 +22,12 @@ def tours_cost(dist, tours):
     for tour in tours:
         edges = zip(tour,tour[1:] + [tour[0]])
         for i, j in edges:
-            sum += dist[max(i,j),min(i,j)]
+            sum += get_dist(dist,i,j)
 
     return sum
+
+def get_dist(dist, i, j):
+    return dist[max(i,j),min(i,j)]
 
 def lagrangian_heuristic(dist, tours, n):
     '''
@@ -40,8 +42,9 @@ def lagrangian_heuristic(dist, tours, n):
         Tupla com custo dos novos tours e lista dos tours corrigidos.
     '''
 
-    # Arestas ordenadas pelas distâncias
-    sorted_edges = [k for k, _ in sorted(dist.items(), key=lambda item: item[1])]
+    # Recupera as arestas de um tour
+    def to_edges(tour):
+        return zip(tour,tour[1:] + [tour[0]])
 
     # Função auxiliar que corrige o segundo tour, retorna os tours corrigidos
     # e o custo total.
@@ -52,108 +55,140 @@ def lagrangian_heuristic(dist, tours, n):
         tour_fix = tours[0]
         tours_new.append(tour_fix.copy())
         # Arestas de tour_fix
-        edges_fix = set(zip(tour_fix,tour_fix[1:] + [tour_fix[0]]))
+        edges_fix = set(to_edges(tour_fix))
 
         # Conserta cada um dos tours restantes
-        pos = 1
-        sorted_edges_local = sorted_edges
-        while pos < len(tours):
-            tour_wrong = tours[pos]
+        for tour_wrong in tours[1:]:
 
             # Estruturas para representar os fragmentos corretos do tour_wrong:
             # Vizinho de cada vértice (conectados por arestas que não estejam 
             # fixas)
             neighbors = {}
-            # Conjunto para indicar que um vértice não tem as duas arestas
-            orphans = set()
-            # Tamanho do fragmentos
-            frag_sizes = {}
-            # Estrutura de conjunto disjunto para representar a que fragmento 
-            # um vértice pertencem
-            ds = DisjointSet()
+            # Conjunto de arestas invalidas
+            invalid_edges = set()
+            # Conjunto de arestas validas
+            valid_edges = set()
+            # Pares de arestas candidatas para correção
+            candidates = []
 
             for i in range(n):
-                ds.find(i)
-                frag_sizes[i] = 1
                 neighbors[i] = []
-                orphans.add(i)
 
             # Para adicionar arestas
             def add_edge(i,j):
                 # adiciona aresta entre i e j
                 neighbors[i].append(j)
                 neighbors[j].append(i)
-                # i e j pertencem ao mesmo fragmento
-                ds.union(i,j)
-                frag_sizes[ds.find(i)] = frag_sizes[ds.find(i)] + frag_sizes[ds.find(j)]
-                # i e j não são mais órfãos
-                # a menos que só tenham um vizinho
-                if len(neighbors[i]) > 1:
-                    orphans.discard(i)
-                if len(neighbors[j]) > 1:
-                    orphans.discard(j)
+                # Se i e j são validas
+                if valid(i,j):
+                    valid_edges.add((i,j))
+                else:
+                    invalid_edges.add((i,j))
+
+            # Para gerar canditatos
+            def find_canditates(i,j):
+                if not valid(i,j):
+                    for (k,l) in invalid_edges:
+                        if not i in [k,l] and not j in [k,l]:
+                            heappush(candidates,
+                                     (get_dist(dist,i,k) +
+                                      get_dist(dist,j,l),(i,j),(k,l),False))
+                            heappush(candidates,
+                                     (get_dist(dist,i,l) +
+                                      get_dist(dist,j,k),(i,j),(k,l),True))
+
+            # Para remover arestas
+            def remove_edge(i,j):
+                # adiciona aresta entre i e j
+                neighbors[i].remove(j)
+                neighbors[j].remove(i)
+                # Se i e j são validas
+                if valid(i,j):
+                    valid_edges.discard((i,j))
+                else:
+                    invalid_edges.discard((i,j))
+
+            # Para encontar o final de um caminho
+            def end_of_path(i):
+                u = i
+                v = neighbors[i][0]
+                while len(neighbors[v]) > 1:
+                    if neighbors[v][0] == u:
+                        u = v
+                        v = neighbors[v][1]
+                    else:
+                        u = v
+                        v = neighbors[v][0]
+                return v
 
             # Para verificar se (i,j) não esta fixo
             def valid(i,j):
                 return (not (i, j) in edges_fix and not (j, i) in edges_fix)
 
-            # Para verificar se adicionar uma aresta não abriga a adição de uma
-            # aresta invalida
-            def force_invalid(i,j):
-               new_size = frag_sizes[ds.find(i)] + frag_sizes[ds.find(j)]
-
-               if new_size >= n - 1:
-                   orphans.discard(i)
-                   orphans.discard(j)
-                   l = list(orphans)
-                   if len(l) == 1:
-                       if not valid(i,l[0]) or not valid(j,l[0]):
-                           return True
-                   elif not valid(l[0], l[1]):
-                       return True
-                   orphans.add(i)
-                   orphans.add(j)
-
-               return False
-
-            edges = list(zip(tour_wrong,tour_wrong[1:] + [tour_wrong[0]]))
+            edges = list(to_edges(tour_wrong))
             for (i, j) in edges: # Para cada aresta do tour_wrong
-                # Se a aresta é válida
-                if valid(i,j):
-                    add_edge(i,j)
+                add_edge(i,j)
+                find_canditates(i,j)
 
-            # Adiciona arestas até limpar o conjunto orphans,
+            # Adiciona arestas até limpar o conjunto arestas invalidas,
             # não permite ciclos menores que n
-            for (i, j) in sorted_edges:
 
-                # Acabaram os órfãos
-                if len(orphans) == 0:
-                    break
+            # Remove pares de arestas invalidas não consecutivas,
+            # da preferencia para adicionar arestas com custos menores
+            skip = set() # Candidatos deixados para depois
+            while len(candidates) > 0:
 
-                # Se (i,j) conecta órfãos
-                if i in orphans and j in orphans:
-                    # Se (i,j) é uma aresta válida, não vai formar um ciclo de
-                    # tamanho menor que n e não vai obrigar a adição de uma
-                    # aresta invalida
-                    if valid(i,j) and ( len(orphans) <= 2 or
-                          not ds.connected(i,j) and not force_invalid(i,j)):
+                (_, (i,j), (k,l), flip) = heappop(candidates)
+
+                # Uma das arestas já foi substituida
+                if not (i,j) in invalid_edges or not (k,l) in invalid_edges:
+                    continue
+
+                # Trocar as arestas forma um ciclo
+                remove_edge(i,j)
+                remove_edge(k,l)
+                if (end_of_path(i) == l) == flip:
+                    if (min((i,j),(k,l)), max((i,j),(k,l))) in skip:
+                        flip = not flip
+                    else:
+                        skip.add((min((i,j),(k,l)), max((i,j),(k,l))))
                         add_edge(i,j)
+                        add_edge(k,l)
+                        continue
 
-            # Para k>2, existem mais casos onde não podemos fechar o ciclo com
-            # a ordem de arestas dadas. Nesses casos mudamos a ordem e tentamos
-            # de novo.
-            if len(orphans) > 0:
-                assert len(tours) > 2
-                sorted_edges_local = sorted_edges.copy()
-                if not next_permutation(sorted_edges_local, key=lambda item: item[1]):
-                    # Caso não seja possível formar o ciclo (K muito grande com
-                    # poucos vértices).
-                    raise Exception('Impossível formar K ciclos disjuntos')
-                continue
-            else:
-                pos += 1
-                if pos < len(tours):
-                    sorted_edges_local = sorted_edges.copy()
+                # Substitue ambas as arestas
+                # (pelo menos uma das novas é valida)
+                if flip:
+                    add_edge(i,l)
+                    find_canditates(i,l)
+                    add_edge(j,k)
+                    find_canditates(j,k)
+                else:
+                    add_edge(i,k)
+                    find_canditates(i,k)
+                    add_edge(j,l)
+                    find_canditates(j,l)
+
+            # Se não possue mais arestas invalidas não consecutivas...
+            while len(invalid_edges) > 0:
+                (i,j) = next(iter(invalid_edges))
+                # ...encontra uma valida para remover
+                for (k,l) in iter(valid_edges):
+                    if not i in [k,l] and not j in [k,l]:
+                        remove_edge(i,j)
+                        remove_edge(k,l)
+                        if valid(i,k) and valid(j,l) and\
+                                end_of_path(i) == l:
+                            add_edge(i,k)
+                            add_edge(j,l)
+                            break
+                        if valid(i,l) and valid(j,k) and\
+                                end_of_path(i) == k:
+                            add_edge(i,l)
+                            add_edge(j,k)
+                            break
+                        add_edge(i,j)
+                        add_edge(k,l)
 
             # Retorna o dicionário para uma lista
             tour_corrected = [0]
@@ -173,6 +208,8 @@ def lagrangian_heuristic(dist, tours, n):
 
             tours_new.append(tour_corrected)
 
+        assert len(tour_corrected) == n
+        assert set(to_edges(tour_corrected)).isdisjoint(set(to_edges(tour_fix)))
         return [tours_cost(dist, tours_new), tours_new]
 
     # A ordem em que processamos os tours afeta o resultado,

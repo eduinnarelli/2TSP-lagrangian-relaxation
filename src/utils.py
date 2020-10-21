@@ -102,30 +102,3 @@ def print_solution(K, tours, cost):
     for t in range(K):
         print(f'Rota {t}: {tours[t]}')
     print(f'Custo: {cost}\n')
-
-def next_permutation(l, key):
-    '''
-    Encontra a próxima permutação dos elementos de l em ordem lexicografica.
-    Modifica a lista de entrada
-
-    Args:
-        l: lista para ser modificada
-        key: função para obter a chave usada na comparação
-
-    Returns:
-        True se encontrou a próxima permutação, False caso já é a ultima
-    '''
-
-    if len(l) <= 1:
-        return False
-
-    for i in range(len(l) - 2, -1, -1):
-        j = i + 1
-        if key(l[i]) < key(l[j]):
-            k = len(l) - 1
-            while not (key(l[i]) < key(l[k])):
-                k -= 1
-            l[i], l[k] = l[k], l[i]
-            l[j:] = l[-1:j-1:-1]
-            return True
-    return False
