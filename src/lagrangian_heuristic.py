@@ -135,7 +135,7 @@ def lagrangian_heuristic(dist, tours, n):
                     # Se (i,j) é uma aresta válida, não vai formar um ciclo de
                     # tamanho menor que n e não vai obrigar a adição de uma
                     # aresta invalida
-                    if valid and ( len(orphans) <= 2 or
+                    if valid(i,j) and ( len(orphans) <= 2 or
                           not ds.connected(i,j) and not force_invalid(i,j)):
                         add_edge(i,j)
 
