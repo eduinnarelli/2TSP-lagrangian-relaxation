@@ -9,7 +9,6 @@ Para executar, você deve estar em um ambiente de desenvolvimento com Python (n�
 versões >= 3.6) e com os seguintes pacotes externos instalados:
   - Gurobi (https://www.gurobi.com/documentation/9.0/)
   - tqdm (https://tqdm.github.io/)
-  - disjoint-set (https://github.com/mrapacz/disjoint-set)
 
 **Como executar:**
 
