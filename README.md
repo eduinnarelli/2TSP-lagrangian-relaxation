@@ -1,7 +1,7 @@
 Relaxação Lagrangiana para o Problema dos Dois Caixeiros Viajantes (2-TSP)
 ================================
 
-Atividade 3 de MC859 - Projeto em Teoria da Computação.
+Atividade 3 de MC859/MO824 - Tópicos em Otimização Combinatória
 
 **Dependências:** 
 
